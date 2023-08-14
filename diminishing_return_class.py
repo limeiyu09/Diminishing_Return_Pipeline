@@ -7,9 +7,10 @@ import s3_connector
 
 import matplotlib.pyplot as plt 
 import datetime
+from numpy import cov
 from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
-from sipy import stats
+from scipy import stats
 import openpyxl
 
 # Set init parameters
@@ -84,9 +85,9 @@ class diminishing_return:
 	def create_file(self):
 		# Convert parameters to table
 		temp = []
-		parameters = [self.start_date, self.end_date, self.countries, self.funnels, self.channels, self.partner
+		parameters = [self.start_date, self.end_date, self.countries, self.funnels, self.channels, self.partner,
 						self.measure, self.cost_per]
-		names = ['Start Date', 'End Date'. 'Country', 'Funnel', 'Channel', 'Partner', 'Measure', 'Cost Per']
+		names = ['Start Date', 'End Date', 'Country', 'Funnel', 'Channel', 'Partner', 'Measure', 'Cost Per']
 		for n, i in enumerate(parameters):
 			try:
 				a = i.copy()
@@ -302,6 +303,8 @@ class diminishing_return:
 		for n, i in enumerate(img_good_list):
 			# Read one image
 			img = openpyxl.drawing.image.Image(i)
+			img.height = 384
+			img.width = 528
 			# There are 2 columns for images and to determine the start cell of each image:
 				# int(n/2): row # of image
 				# 23 cells: height of image
@@ -318,11 +321,13 @@ class diminishing_return:
 
 		for n, i in enumerate(img_fail_list):
 			img = openpyxl.drawing.image.Image(i)
+			img.height = 384
+			img.width = 528
 			padding = int(n/2) * 23 + 4 + output_len
 			if n%2 == 0:
 				img.anchor = "A{}".format(padding)
 			else:
-				img.anchor = "G{}".format(padding)
+				img.anchor = "I{}".format(padding)
 			ws2.add_image(img)
 		wb.save(self.file_name)
 
@@ -332,4 +337,28 @@ class diminishing_return:
 		for i in img_fail_list:
 			os.remove(i)
 		print("\nModeling Completed !!")
+
+def run(self, countries, funnels, channels, partner, measure, start_date, end_date, cost_per):
+
+	# set init parameters from Jupyter Notebook
+	self.countries = countries
+	self.funnels = funnels
+	self.channels = channels
+	self.partner = partner
+	self.measure = measure
+	# set start date to be the Monday before input start_date
+	self.start_date = pd.to_datetime(start_date-datetime.timedelta(start_date.weekday()))
+	# set end date to be the Sunday after input end_date
+	self.end_date = pd.to_datetime(end_date - datetime.timedelta(6-end_date.weekday( )))
+	self.cost_per = cost_per
+
+	# call all functions in class
+	# Load data from S3 for first-time run only
+	if (type(self.df) == type(None)) is True:
+		self.load_df()
+	# filter df with parameter inputs and sum up by week
+	self.temp_df()
+	self.create_file()
+	self.find_diminishing_points()
+
 
